@@ -1,0 +1,8 @@
+{
+  "admin": {
+    "permissions": ["create_user", "modify_user", "delete_user", "send_mail"]
+  },
+  "user": {
+    "permissions": ["send_mail"]
+  }
+}

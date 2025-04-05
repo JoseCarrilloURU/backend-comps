@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Logger Monitor</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+        background-color: #f4f4f4;
+      }
+      header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 20px;
+        background-color: #333;
+        color: white;
+      }
+      header h1 {
+        margin: 0;
+        font-size: 24px;
+      }
+      header div {
+        display: flex;
+        gap: 10px;
+      }
+      header button {
+        padding: 10px 15px;
+        font-size: 14px;
+        background-color: #007bff;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+      }
+      header button:hover {
+        background-color: #0056b3;
+      }
+      .metrics {
+        display: flex;
+        justify-content: flex-start;
+        gap: 20px;
+        padding: 10px 20px;
+        background-color: #fff;
+        border-bottom: 1px solid #ddd;
+      }
+      .metrics div {
+        font-size: 16px;
+      }
+      .container {
+        padding: 20px;
+      }
+      .table-container {
+        margin-top: 20px;
+        display: block;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        background-color: white;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        table-layout: fixed;
+      }
+      table th,
+      table td {
+        overflow-wrap: break-word; /* Wrap long text in cells */
+        word-wrap: break-word;
+        white-space: normal; /* Allow text to wrap */
+        padding: 10px;
+        text-align: left;
+        border: 1px solid #ddd;
+      }
+      table th {
+        background-color: #007bff;
+        color: white;
+      }
+      table tbody tr:nth-child(even) {
+        background-color: #f9f9f9;
+      }
+      table tbody tr:hover {
+        background-color: #f1f1f1;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Logger Monitor</h1>
+      <div>
+        <button id="importButton">Import Logs</button>
+        <button id="exportButton">Export Logs</button>
+      </div>
+    </header>
+    <div class="metrics">
+      <div id="cpuUsage">Server CPU Usage: Loading...</div>
+      <div id="memoryUsageApp">Server Memory Usage: Loading...</div>
+      <div id="memoryUsage">Total Memory Usage: Loading...</div>
+    </div>
+    <div class="container">
+      <!-- Request Logs Section -->
+      <!-- Request Logs Section -->
+      <div style="text-align: center; margin-bottom: 20px">
+        <h2>Request Logs</h2>
+        <table id="logsTable">
+          <colgroup>
+            <col style="width: 4%" />
+            <!-- ID -->
+            <col style="width: 15%" />
+            <!-- Timestamp -->
+            <col style="width: 10%" />
+            <!-- Endpoint -->
+            <col style="width: 5%" />
+            <!-- IP -->
+            <col style="width: 6%" />
+            <!-- Method -->
+            <col style="width: 30%" />
+            <!-- Body -->
+            <col style="width: 6%" />
+            <!-- Log Type -->
+            <col style="width: 20%" />
+            <!-- Message -->
+            <col style="width: 5%" />
+            <!-- Response Time -->
+            <col style="width: 8%" />
+            <!-- Usage -->
+          </colgroup>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Timestamp</th>
+              <th>Endpoint</th>
+              <th>IP</th>
+              <th>Method</th>
+              <th>Body</th>
+              <th>Log Type</th>
+              <th>Message</th>
+              <th>Time (ms)</th>
+              <th>Usage</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- Logs will be dynamically added here -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- User Logs Section -->
+      <div style="text-align: center; margin-top: 40px">
+        <!-- Added margin-top -->
+        <h2>User Logs</h2>
+        <table id="userLogsTable">
+          <colgroup>
+            <col style="width: 5%" />
+            <!-- ID -->
+            <col style="width: 13%" />
+            <!-- Timestamp -->
+            <col style="width: 16%" />
+            <!-- Endpoint -->
+            <col style="width: 10%" />
+            <!-- Log Type -->
+            <col />
+            <!-- Message -->
+          </colgroup>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Timestamp</th>
+              <th>Endpoint</th>
+              <th>Log Type</th>
+              <th>Message</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- User Logs will be dynamically added here -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <script>
+      const websocketUrl = "ws://localhost:8080";
+      const exportButton = document.getElementById("exportButton");
+      const importButton = document.getElementById("importButton");
+      const cpuUsageElement = document.getElementById("cpuUsage");
+      const memoryUsageElement = document.getElementById("memoryUsage");
+      const memoryUsageAppElement = document.getElementById("memoryUsageApp");
+      const logsTableBody = document
+        .getElementById("logsTable")
+        .querySelector("tbody");
+      const userLogsTableBody = document
+        .getElementById("userLogsTable")
+        .querySelector("tbody");
+
+      // WebSocket connection
+      const ws = new WebSocket(websocketUrl);
+
+      ws.onopen = () => {
+        console.log("WebSocket connection established.");
+      };
+
+      ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+
+        // Update Logs Table
+        if (data.logs) {
+          logsTableBody.innerHTML = ""; // Clear existing rows
+          data.logs.forEach((log) => {
+            const row = document.createElement("tr");
+            const formattedTimestamp = new Date(log.timestamp).toLocaleString(); // Format the timestamp
+            row.innerHTML = `
+              <td>${log.id}</td>
+              <td>${formattedTimestamp}</td>
+              <td>${log.endpoint}</td>
+              <td>${log.ip}</td>
+              <td>${log.method}</td>
+              <td>${log.body}</td>
+              <td>${log.logType}</td>
+              <td>${log.message}</td>
+              <td>${log.responseTime}</td>
+              <td>${log.usage}</td>
+            `;
+            logsTableBody.appendChild(row);
+          });
+        }
+
+        // Update User Logs Table
+        if (data.userLogs) {
+          userLogsTableBody.innerHTML = ""; // Clear existing rows
+          data.userLogs.forEach((log) => {
+            const row = document.createElement("tr");
+            const formattedTimestamp = new Date(log.timestamp).toLocaleString(); // Format the timestamp
+            row.innerHTML = `
+              <td>${log.id}</td>
+              <td>${formattedTimestamp}</td>
+              <td>${log.endpoint}</td>
+              <td>${log.logType}</td>
+              <td>${log.message}</td>
+            `;
+            userLogsTableBody.appendChild(row);
+          });
+        }
+
+        if (data.metrics) {
+          cpuUsageElement.textContent = `Server CPU Usage: ${data.metrics.cpuUsage}`;
+          memoryUsageAppElement.textContent = `Server Memory Usage: ${data.metrics.memoryUsageApp}`;
+          memoryUsageElement.textContent = `Total Memory Usage: ${data.metrics.memoryUsage}`;
+        }
+      };
+
+      ws.onclose = () => {
+        console.log("WebSocket connection closed.");
+      };
+
+      ws.onerror = (error) => {
+        console.error("WebSocket error:", error);
+      };
+
+      // Export logs button functionality
+      exportButton.addEventListener("click", () => {
+        window.location.href = "http://localhost:3000/download-logs";
+      });
+
+      // Placeholder for Import button functionality
+      importButton.addEventListener("click", () => {
+        alert("Import functionality not implemented yet.");
+      });
+    </script>
+  </body>
+</html>
