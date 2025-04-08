@@ -13,6 +13,7 @@ import DbManager from "./components/dbmanager.js";
 import logger from "./components/logger.js";
 import { sendTextMail, sendTemplateMail } from "./components/mailer.js";
 import argon2 from "argon2";
+import cors from "cors";
 
 dotenv.config();
 
@@ -34,6 +35,7 @@ const dbManager = new DbManager(pgAdapter, {
   allowTransactions: true,
 });
 
+app.use(cors());
 app.use(bodyParser.json());
 app.use(logger.main);
 logger.setup(app);
@@ -84,8 +86,10 @@ app.post("/login", async (req, res) => {
 app.post("/token", (req, res) => {
   const { token } = req.body;
   console.log("Token request:", req.body); // Log token request data
-  if (!token)
+  if (!token) {
+    logger.logWarning("No se metio un token bb.");
     return res.status(401).json({ error: "No refresh token provided" });
+  }
 
   jwt.verify(token, secretKey, (err, user) => {
     if (err) {
@@ -101,6 +105,7 @@ app.post("/token", (req, res) => {
     console.log("Generated access token:", accessToken); // Log generated access token
     res.json({ accessToken });
   });
+  logger.logDebug("Token generado");
 });
 
 app.get("/protected", authenticateToken, (req, res) => {

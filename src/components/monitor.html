@@ -39,6 +39,11 @@
       header button:hover {
         background-color: #0056b3;
       }
+      header input {
+        padding: 5px;
+        margin: 10px;
+        width: 250px;
+      }
       .metrics {
         display: flex;
         justify-content: flex-start;
@@ -66,9 +71,9 @@
       }
       table th,
       table td {
-        overflow-wrap: break-word; /* Wrap long text in cells */
+        overflow-wrap: break-word;
         word-wrap: break-word;
-        white-space: normal; /* Allow text to wrap */
+        white-space: normal;
         padding: 10px;
         text-align: left;
         border: 1px solid #ddd;
@@ -82,6 +87,17 @@
       }
       table tbody tr:hover {
         background-color: #f1f1f1;
+      }
+      .pagination-controls {
+        margin: 15px 0;
+        text-align: center;
+      }
+      .pagination-controls button {
+        padding: 5px 10px;
+        margin: 0 5px;
+      }
+      .search-controls {
+        margin: 10px 0;
       }
     </style>
   </head>
@@ -100,31 +116,27 @@
     </div>
     <div class="container">
       <!-- Request Logs Section -->
-      <!-- Request Logs Section -->
       <div style="text-align: center; margin-bottom: 20px">
         <h2>Request Logs</h2>
+        <div class="search-controls">
+          <input
+            type="text"
+            id="searchLogsInput"
+            placeholder="Buscar logs..."
+          />
+        </div>
         <table id="logsTable">
           <colgroup>
             <col style="width: 4%" />
-            <!-- ID -->
             <col style="width: 15%" />
-            <!-- Timestamp -->
             <col style="width: 8%" />
-            <!-- Endpoint -->
             <col style="width: 7%" />
-            <!-- IP -->
             <col style="width: 6%" />
-            <!-- Method -->
             <col style="width: 30%" />
-            <!-- Body -->
             <col style="width: 6%" />
-            <!-- Log Type -->
             <col style="width: 20%" />
-            <!-- Message -->
             <col style="width: 5%" />
-            <!-- Response Time -->
             <col style="width: 8%" />
-            <!-- Usage -->
           </colgroup>
           <thead>
             <tr>
@@ -140,28 +152,32 @@
               <th>Usage</th>
             </tr>
           </thead>
-          <tbody>
-            <!-- Logs will be dynamically added here -->
-          </tbody>
+          <tbody></tbody>
         </table>
+        <div class="pagination-controls">
+          <button id="prevLogsPage">Previous</button>
+          <span id="logsPageIndicator">Page 1</span>
+          <button id="nextLogsPage">Next</button>
+        </div>
       </div>
 
       <!-- User Logs Section -->
       <div style="text-align: center; margin-top: 40px">
-        <!-- Added margin-top -->
         <h2>User Logs</h2>
+        <div class="search-controls">
+          <input
+            type="text"
+            id="searchUserLogsInput"
+            placeholder="Buscar user logs..."
+          />
+        </div>
         <table id="userLogsTable">
           <colgroup>
             <col style="width: 5%" />
-            <!-- ID -->
             <col style="width: 13%" />
-            <!-- Timestamp -->
             <col style="width: 16%" />
-            <!-- Endpoint -->
             <col style="width: 10%" />
-            <!-- Log Type -->
             <col />
-            <!-- Message -->
           </colgroup>
           <thead>
             <tr>
@@ -172,29 +188,67 @@
               <th>Message</th>
             </tr>
           </thead>
-          <tbody>
-            <!-- User Logs will be dynamically added here -->
-          </tbody>
+          <tbody></tbody>
         </table>
+        <div class="pagination-controls">
+          <button id="prevUserLogsPage">Previous</button>
+          <span id="userLogsPageIndicator">Page 1</span>
+          <button id="nextUserLogsPage">Next</button>
+        </div>
       </div>
     </div>
 
+    <input type="file" id="importFile" style="display: none" accept=".sqlite" />
     <script>
-      const websocketUrl = "ws://localhost:8080";
+      // Elementos del achetemeele
       const exportButton = document.getElementById("exportButton");
       const importButton = document.getElementById("importButton");
+      const importFile = document.getElementById("importFile");
       const cpuUsageElement = document.getElementById("cpuUsage");
       const memoryUsageElement = document.getElementById("memoryUsage");
       const memoryUsageAppElement = document.getElementById("memoryUsageApp");
-      const logsTableBody = document
-        .getElementById("logsTable")
-        .querySelector("tbody");
-      const userLogsTableBody = document
-        .getElementById("userLogsTable")
-        .querySelector("tbody");
 
-      // WebSocket connection
-      const ws = new WebSocket(websocketUrl);
+      // Configuración de las tablas
+      const tablesConfig = {
+        logs: {
+          tableBody: document
+            .getElementById("logsTable")
+            .querySelector("tbody"),
+          searchInput: document.getElementById("searchLogsInput"),
+          pageIndicator: document.getElementById("logsPageIndicator"),
+          prevButton: document.getElementById("prevLogsPage"),
+          nextButton: document.getElementById("nextLogsPage"),
+          endpoint: "/search-logs",
+          limit: 10,
+          columns: 10,
+        },
+        userLogs: {
+          tableBody: document
+            .getElementById("userLogsTable")
+            .querySelector("tbody"),
+          searchInput: document.getElementById("searchUserLogsInput"),
+          pageIndicator: document.getElementById("userLogsPageIndicator"),
+          prevButton: document.getElementById("prevUserLogsPage"),
+          nextButton: document.getElementById("nextUserLogsPage"),
+          endpoint: "/search-userlogs",
+          limit: 10,
+          columns: 5,
+        },
+      };
+
+      // Estado de paginación
+      const paginationState = {
+        logs: {
+          currentPage: 1,
+          isSearching: false,
+        },
+        userLogs: {
+          currentPage: 1,
+          isSearching: false,
+        },
+      };
+
+      const ws = new WebSocket("ws://localhost:8080");
 
       ws.onopen = () => {
         console.log("WebSocket connection established.");
@@ -203,49 +257,23 @@
       ws.onmessage = (event) => {
         const data = JSON.parse(event.data);
 
-        // Update Logs Table
-        if (data.logs) {
-          logsTableBody.innerHTML = ""; // Clear existing rows
-          data.logs.forEach((log) => {
-            const row = document.createElement("tr");
-            const formattedTimestamp = new Date(log.timestamp).toLocaleString(); // Format the timestamp
-            row.innerHTML = `
-              <td>${log.id}</td>
-              <td>${formattedTimestamp}</td>
-              <td>${log.endpoint}</td>
-              <td>${log.ip}</td>
-              <td>${log.method}</td>
-              <td>${log.body}</td>
-              <td>${log.logType}</td>
-              <td>${log.message}</td>
-              <td>${log.responseTime}</td>
-              <td>${log.usage}</td>
-            `;
-            logsTableBody.appendChild(row);
-          });
-        }
-
-        // Update User Logs Table
-        if (data.userLogs) {
-          userLogsTableBody.innerHTML = ""; // Clear existing rows
-          data.userLogs.forEach((log) => {
-            const row = document.createElement("tr");
-            const formattedTimestamp = new Date(log.timestamp).toLocaleString(); // Format the timestamp
-            row.innerHTML = `
-              <td>${log.id}</td>
-              <td>${formattedTimestamp}</td>
-              <td>${log.endpoint}</td>
-              <td>${log.logType}</td>
-              <td>${log.message}</td>
-            `;
-            userLogsTableBody.appendChild(row);
-          });
-        }
-
+        // Actualizar de forma continua
         if (data.metrics) {
           cpuUsageElement.textContent = `Server CPU Usage: ${data.metrics.cpuUsage}`;
           memoryUsageAppElement.textContent = `Server Memory Usage: ${data.metrics.memoryUsageApp}`;
           memoryUsageElement.textContent = `Total Memory Usage: ${data.metrics.memoryUsage}`;
+        }
+
+        // Actualizar logs solo si no hay búsqueda activa
+        if (!paginationState.logs.isSearching && data.logs) {
+          updateTable("logs", data.logs.slice(0, tablesConfig.logs.limit));
+        }
+
+        if (!paginationState.userLogs.isSearching && data.userLogs) {
+          updateTable(
+            "userLogs",
+            data.userLogs.slice(0, tablesConfig.userLogs.limit)
+          );
         }
       };
 
@@ -257,15 +285,157 @@
         console.error("WebSocket error:", error);
       };
 
-      // Export logs button functionality
+      // Función para cargar datos de la tabla
+      async function fetchTableData(tableType) {
+        const config = tablesConfig[tableType];
+        const state = paginationState[tableType];
+
+        const query = config.searchInput.value.trim();
+        state.isSearching = query !== "";
+
+        try {
+          // Mostrar loading
+          config.tableBody.innerHTML = `<tr><td colspan="${config.columns}" style="text-align: center;">Loading...</td></tr>`;
+
+          let data;
+          if (state.isSearching) {
+            // Modo búsqueda paginada
+            const response = await fetch(
+              `http://localhost:3000${
+                config.endpoint
+              }?search=${encodeURIComponent(query)}&page=${
+                state.currentPage
+              }&limit=${config.limit}`
+            );
+            if (!response.ok) throw new Error("Network response was not ok");
+            data = await response.json();
+          } else {
+            // Modo tiempo real (solo para carga inicial)
+            const response = await fetch(
+              `http://localhost:3000${config.endpoint}?page=1&limit=${config.limit}`
+            );
+            if (!response.ok) throw new Error("Network response was not ok");
+            data = await response.json();
+            state.currentPage = 1; // Resetear a primera página
+          }
+
+          // Actualizar tabla
+          updateTable(
+            tableType,
+            data[tableType === "logs" ? "logs" : "userLogs"]
+          );
+
+          // Actualizar controles de paginación
+          if (state.isSearching) {
+            const totalPages = Math.ceil(data.total / config.limit);
+            config.pageIndicator.textContent = `Page ${data.page} of ${totalPages}`;
+            config.prevButton.disabled = state.currentPage <= 1;
+            config.nextButton.disabled = state.currentPage >= totalPages;
+          } else {
+            config.pageIndicator.textContent = `Page 1`;
+            config.prevButton.disabled = true;
+            config.nextButton.disabled = true;
+          }
+        } catch (error) {
+          console.error(`Error fetching ${tableType}:`, error);
+          config.tableBody.innerHTML = `<tr><td colspan="${config.columns}">Error loading data: ${error.message}</td></tr>`;
+        }
+      }
+
+      // Función para actualizar la tabla 
+      function updateTable(tableType, items) {
+        const config = tablesConfig[tableType];
+        config.tableBody.innerHTML = "";
+
+        items.forEach((item) => {
+          const row = document.createElement("tr");
+
+          if (tableType === "logs") {
+            row.innerHTML = `
+                        <td>${item.id}</td>
+                        <td>${new Date(item.timestamp).toLocaleString()}</td>
+                        <td>${item.endpoint}</td>
+                        <td>${item.ip}</td>
+                        <td>${item.method}</td>
+                        <td>${item.body || ""}</td>
+                        <td>${item.logType}</td>
+                        <td>${item.message}</td>
+                        <td>${item.responseTime}</td>
+                        <td>${item.usage}</td>
+                    `;
+          } else {
+            // userLogs
+            row.innerHTML = `
+                        <td>${item.id}</td>
+                        <td>${new Date(item.timestamp).toLocaleString()}</td>
+                        <td>${item.endpoint}</td>
+                        <td>${item.logType}</td>
+                        <td>${item.message}</td>
+                    `;
+          }
+
+          config.tableBody.appendChild(row);
+        });
+
+        // Rellenar filas vacías si es necesario
+        const emptyRows = config.limit - items.length;
+        for (let i = 0; i < emptyRows; i++) {
+          const emptyRow = document.createElement("tr");
+          emptyRow.innerHTML = `<td colspan="${config.columns}" style="text-align: center;">-</td>`;
+          config.tableBody.appendChild(emptyRow);
+        }
+      }
+
+      // Configurar event listeners para ambas tablas
+      Object.keys(tablesConfig).forEach((tableType) => {
+        const config = tablesConfig[tableType];
+        const state = paginationState[tableType];
+
+        // Busqueda
+        config.searchInput.addEventListener("input", () => {
+          state.currentPage = 1;
+          fetchTableData(tableType);
+        });
+
+        // Paginación anterior
+        config.prevButton.addEventListener("click", () => {
+          if (state.currentPage > 1) {
+            state.currentPage--;
+            fetchTableData(tableType);
+          }
+        });
+
+        // Paginación siguiente
+        config.nextButton.addEventListener("click", () => {
+          state.currentPage++;
+          fetchTableData(tableType);
+        });
+      });
+
       exportButton.addEventListener("click", () => {
         window.location.href = "http://localhost:3000/download-logs";
       });
 
-      // Placeholder for Import button functionality
       importButton.addEventListener("click", () => {
-        alert("Import functionality not implemented yet.");
+        importFile.click();
       });
+
+      importFile.addEventListener("change", () => {
+        const file = importFile.files[0];
+        const formData = new FormData();
+        formData.append("file", file);
+
+        fetch("http://localhost:3000/import-logs", {
+          method: "POST",
+          body: formData,
+        }).then(() => {
+          fetchTableData("logs");
+          fetchTableData("userLogs");
+        });
+      });
+
+      fetchTableData("logs");
+      fetchTableData("userLogs");
     </script>
   </body>
 </html>
