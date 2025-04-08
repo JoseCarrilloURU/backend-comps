@@ -200,7 +200,6 @@
 
     <input type="file" id="importFile" style="display: none" accept=".sqlite" />
     <script>
-      // Elementos del achetemeele
       const exportButton = document.getElementById("exportButton");
       const importButton = document.getElementById("importButton");
       const importFile = document.getElementById("importFile");
@@ -240,14 +239,17 @@
       const paginationState = {
         logs: {
           currentPage: 1,
-          isSearching: false,
+          isSearching: true, // Modo paginación activado por defecto
+          totalItems: 0,
         },
         userLogs: {
           currentPage: 1,
-          isSearching: false,
+          isSearching: true, // Modo paginación activado por defecto
+          totalItems: 0,
         },
       };
 
+      // WebSocket connection
       const ws = new WebSocket("ws://localhost:8080");
 
       ws.onopen = () => {
@@ -257,18 +259,14 @@
       ws.onmessage = (event) => {
         const data = JSON.parse(event.data);
 
-        // Actualizar de forma continua
+        // Actualizar métricas siempre
         if (data.metrics) {
           cpuUsageElement.textContent = `Server CPU Usage: ${data.metrics.cpuUsage}`;
           memoryUsageAppElement.textContent = `Server Memory Usage: ${data.metrics.memoryUsageApp}`;
           memoryUsageElement.textContent = `Total Memory Usage: ${data.metrics.memoryUsage}`;
         }
 
-        // Actualizar logs solo si no hay búsqueda activa
-        if (!paginationState.logs.isSearching && data.logs) {
-          updateTable("logs", data.logs.slice(0, tablesConfig.logs.limit));
-        }
-
+        // Actualizar userLogs solo si no hay búsqueda activa
         if (!paginationState.userLogs.isSearching && data.userLogs) {
           updateTable(
             "userLogs",
@@ -285,64 +283,52 @@
         console.error("WebSocket error:", error);
       };
 
-      // Función para cargar datos de la tabla
       async function fetchTableData(tableType) {
         const config = tablesConfig[tableType];
         const state = paginationState[tableType];
 
         const query = config.searchInput.value.trim();
-        state.isSearching = query !== "";
+        state.isSearching = query !== "" || tableType === "logs"; // Forzar paginación para logs
 
         try {
-          // Mostrar loading
-          config.tableBody.innerHTML = `<tr><td colspan="${config.columns}" style="text-align: center;">Loading...</td></tr>`;
 
-          let data;
-          if (state.isSearching) {
-            // Modo búsqueda paginada
-            const response = await fetch(
-              `http://localhost:3000${
-                config.endpoint
-              }?search=${encodeURIComponent(query)}&page=${
-                state.currentPage
-              }&limit=${config.limit}`
-            );
-            if (!response.ok) throw new Error("Network response was not ok");
-            data = await response.json();
-          } else {
-            // Modo tiempo real (solo para carga inicial)
-            const response = await fetch(
-              `http://localhost:3000${config.endpoint}?page=1&limit=${config.limit}`
-            );
-            if (!response.ok) throw new Error("Network response was not ok");
-            data = await response.json();
-            state.currentPage = 1; // Resetear a primera página
-          }
+          const response = await fetch(
+            `http://localhost:3000${
+              config.endpoint
+            }?search=${encodeURIComponent(query)}&page=${
+              state.currentPage
+            }&limit=${config.limit}`
+          );
 
-          // Actualizar tabla
+          if (!response.ok) throw new Error("Network response was not ok");
+          const data = await response.json();
+
+          // Guardar el total de items
+          state.totalItems = data.total;
+
           updateTable(
             tableType,
             data[tableType === "logs" ? "logs" : "userLogs"]
           );
-
-          // Actualizar controles de paginación
-          if (state.isSearching) {
-            const totalPages = Math.ceil(data.total / config.limit);
-            config.pageIndicator.textContent = `Page ${data.page} of ${totalPages}`;
-            config.prevButton.disabled = state.currentPage <= 1;
-            config.nextButton.disabled = state.currentPage >= totalPages;
-          } else {
-            config.pageIndicator.textContent = `Page 1`;
-            config.prevButton.disabled = true;
-            config.nextButton.disabled = true;
-          }
+          updatePaginationInfo(tableType);
         } catch (error) {
           console.error(`Error fetching ${tableType}:`, error);
           config.tableBody.innerHTML = `<tr><td colspan="${config.columns}">Error loading data: ${error.message}</td></tr>`;
         }
       }
 
-      // Función para actualizar la tabla 
+      // Función para actualizar la información de paginación (chequea si podes ir a la siguiente pagina o la anterior)
+      // ademas de actualizar el total de paginas
+      function updatePaginationInfo(tableType) {
+        const config = tablesConfig[tableType];
+        const state = paginationState[tableType];
+
+        const totalPages = Math.ceil(state.totalItems / config.limit);
+        config.pageIndicator.textContent = `Page ${state.currentPage} of ${totalPages}`;
+        config.prevButton.disabled = state.currentPage <= 1;
+        config.nextButton.disabled = state.currentPage >= totalPages;
+      }
+
       function updateTable(tableType, items) {
         const config = tablesConfig[tableType];
         config.tableBody.innerHTML = "";
@@ -352,32 +338,32 @@
 
           if (tableType === "logs") {
             row.innerHTML = `
-                        <td>${item.id}</td>
-                        <td>${new Date(item.timestamp).toLocaleString()}</td>
-                        <td>${item.endpoint}</td>
-                        <td>${item.ip}</td>
-                        <td>${item.method}</td>
-                        <td>${item.body || ""}</td>
-                        <td>${item.logType}</td>
-                        <td>${item.message}</td>
-                        <td>${item.responseTime}</td>
-                        <td>${item.usage}</td>
-                    `;
+              <td>${item.id}</td>
+              <td>${new Date(item.timestamp).toLocaleString()}</td>
+              <td>${item.endpoint}</td>
+              <td>${item.ip}</td>
+              <td>${item.method}</td>
+              <td>${item.body || ""}</td>
+              <td>${item.logType}</td>
+              <td>${item.message}</td>
+              <td>${item.responseTime}</td>
+              <td>${item.usage}</td>
+            `;
           } else {
             // userLogs
             row.innerHTML = `
-                        <td>${item.id}</td>
-                        <td>${new Date(item.timestamp).toLocaleString()}</td>
-                        <td>${item.endpoint}</td>
-                        <td>${item.logType}</td>
-                        <td>${item.message}</td>
-                    `;
+              <td>${item.id}</td>
+              <td>${new Date(item.timestamp).toLocaleString()}</td>
+              <td>${item.endpoint}</td>
+              <td>${item.logType}</td>
+              <td>${item.message}</td>
+            `;
           }
 
           config.tableBody.appendChild(row);
         });
 
-        // Rellenar filas vacías si es necesario
+        // Rellenar filas vacías porque en blanco se ven feas
         const emptyRows = config.limit - items.length;
         for (let i = 0; i < emptyRows; i++) {
           const emptyRow = document.createElement("tr");
@@ -391,13 +377,13 @@
         const config = tablesConfig[tableType];
         const state = paginationState[tableType];
 
-        // Busqueda
+        // Buscar los logs 
         config.searchInput.addEventListener("input", () => {
           state.currentPage = 1;
           fetchTableData(tableType);
         });
 
-        // Paginación anterior
+        // Pasar a la pagina anterior
         config.prevButton.addEventListener("click", () => {
           if (state.currentPage > 1) {
             state.currentPage--;
@@ -412,6 +398,7 @@
         });
       });
 
+      // Configurar botones de import/export
       exportButton.addEventListener("click", () => {
         window.location.href = "http://localhost:3000/download-logs";
       });
@@ -429,11 +416,13 @@
           method: "POST",
           body: formData,
         }).then(() => {
+          // Recargar ambas tablas después de importar
           fetchTableData("logs");
           fetchTableData("userLogs");
         });
       });
 
+      // Carga inicial - mostrar todos los logs paginados
       fetchTableData("logs");
       fetchTableData("userLogs");
     </script>

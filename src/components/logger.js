@@ -21,6 +21,7 @@ const logger = {
   async main(req, res, next) {
     const excludedEndpoints = [
       "/search-logs",
+      "/search-userlogs",
       "/download-logs",
       "/import-logs",
     ];
@@ -316,11 +317,23 @@ const logger = {
           };
 
           const client = await sqliteAdapter.getClient();
+
+          const totalResults = await sqliteAdapter.query(
+            client,
+            "SELECT COUNT(*) as total FROM logs"
+          );
+
           const logs = await sqliteAdapter.query(
             client,
             `SELECT * FROM logs ORDER BY timestamp DESC, id DESC LIMIT ?`,
             [clientState.limit]
           );
+
+          const userLogTotal = await sqliteAdapter.query(
+            client,
+            "SELECT COUNT(*) as total FROM userLogs"
+          );
+
           const userLogs = await sqliteAdapter.query(
             client,
             "SELECT id, timestamp, endpoint, logType, message FROM userLogs"
@@ -330,7 +343,9 @@ const logger = {
             JSON.stringify({
               metrics,
               logs,
+              logsTotal: totalResults,
               userLogs,
+              userLogsTotal: userLogTotal,
               pagination: {
                 page: clientState.currentPage,
                 limit: clientState.limit,
