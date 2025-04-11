@@ -272,7 +272,7 @@ const logger = {
         const userLogs = await sqliteAdapter.query(
           client,
           `SELECT * FROM userLogs 
-           WHERE endpoint LIKE ? OR logType LIKE ? 
+           WHERE endpoint LIKE ? OR logType LIKE ?
            ORDER BY timestamp DESC, id DESC 
            LIMIT ? OFFSET ?`,
           [`%${search}%`, `%${search}%`, limit, offset]
@@ -318,34 +318,48 @@ const logger = {
 
           const client = await sqliteAdapter.getClient();
 
-          const totalResults = await sqliteAdapter.query(
+          // Fetch total logs count
+          const totalLogsResult = await sqliteAdapter.query(
+            // Renamed for clarity
             client,
             "SELECT COUNT(*) as total FROM logs"
           );
+          // *** CHANGE HERE: Extract the total count ***
+          const logsTotalCount = totalLogsResult[0]?.total || 0; // Get the number, default to 0 if no result
 
+          // Fetch latest logs (limited and sorted)
           const logs = await sqliteAdapter.query(
             client,
             `SELECT * FROM logs ORDER BY timestamp DESC, id DESC LIMIT ?`,
             [clientState.limit]
           );
 
-          const userLogTotal = await sqliteAdapter.query(
+          // Fetch total user logs count
+          const totalUserLogsResult = await sqliteAdapter.query(
+            // Renamed for clarity
             client,
             "SELECT COUNT(*) as total FROM userLogs"
           );
+          // *** CHANGE HERE: Extract the total count ***
+          const userLogsTotalCount = totalUserLogsResult[0]?.total || 0; // Get the number, default to 0
 
+          // Fetch latest userLogs (limited and sorted)
           const userLogs = await sqliteAdapter.query(
             client,
-            "SELECT id, timestamp, endpoint, logType, message FROM userLogs"
+            `SELECT id, timestamp, endpoint, logType, message FROM userLogs ORDER BY timestamp DESC, id DESC LIMIT ?`,
+            [clientState.limit]
           );
 
+          // Send data via WebSocket with the extracted counts
           ws.send(
             JSON.stringify({
               metrics,
               logs,
-              logsTotal: totalResults,
+              logsTotal: logsTotalCount, // Send the number
               userLogs,
-              userLogsTotal: userLogTotal,
+              userLogsTotal: userLogsTotalCount, // Send the number
+              // 'pagination' object in WS message is likely unused by client now,
+              // but keeping it doesn't hurt unless you want to clean it up.
               pagination: {
                 page: clientState.currentPage,
                 limit: clientState.limit,
@@ -353,7 +367,10 @@ const logger = {
             })
           );
         } catch (error) {
-          console.error("Error in WebSocket interval:", error);
+          // Added more specific error logging for WebSocket issues
+          console.error("Error in WebSocket data fetch/send interval:", error);
+          // Consider sending an error message to the client if appropriate
+          // ws.send(JSON.stringify({ error: "Failed to fetch server data" }));
         }
       }, 1000);
 

@@ -39,11 +39,7 @@
       header button:hover {
         background-color: #0056b3;
       }
-      header input {
-        padding: 5px;
-        margin: 10px;
-        width: 250px;
-      }
+      /* Removed header input style as it wasn't used */
       .metrics {
         display: flex;
         justify-content: flex-start;
@@ -59,6 +55,7 @@
         padding: 20px;
       }
       .table-container {
+        /* This class wasn't used, could be removed */
         margin-top: 20px;
         display: block;
       }
@@ -67,16 +64,22 @@
         border-collapse: collapse;
         background-color: white;
         box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-        table-layout: fixed;
+        table-layout: fixed; /* Important for fixed column widths */
       }
       table th,
       table td {
-        overflow-wrap: break-word;
-        word-wrap: break-word;
-        white-space: normal;
+        overflow-wrap: break-word; /* Allow long words to break */
+        word-wrap: break-word; /* Legacy support */
+        white-space: normal; /* Allow text wrapping */
         padding: 10px;
         text-align: left;
         border: 1px solid #ddd;
+        vertical-align: top; /* Align content to top */
+      }
+      table td pre {
+        white-space: pre-wrap; /* Crucial: Allows wrapping while preserving whitespace */
+        word-wrap: break-word; /* Ensures long strings without spaces also break */
+        margin: 0; /* Optional: Removes default margins from <pre> if needed */
       }
       table th {
         background-color: #007bff;
@@ -95,9 +98,39 @@
       .pagination-controls button {
         padding: 5px 10px;
         margin: 0 5px;
+        cursor: pointer; /* Add cursor pointer */
+      }
+      .pagination-controls button:disabled {
+        cursor: not-allowed; /* Indicate disabled state */
+        opacity: 0.6;
       }
       .search-controls {
         margin: 10px 0;
+        text-align: center; /* Center search input */
+      }
+      .search-controls input {
+        /* Style the search input */
+        padding: 8px 10px;
+        width: 300px; /* Adjust width as needed */
+        max-width: 90%;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+      }
+      .table-section {
+        /* Added wrapper for better structure */
+        text-align: center;
+        margin-bottom: 40px;
+      }
+      .table-section h2 {
+        margin-bottom: 15px;
+      }
+      .loading-row td,
+      .empty-row td {
+        /* Style for loading/empty rows */
+        text-align: center;
+        color: #888;
+        font-style: italic;
+        height: 40px; /* Give empty rows some height */
       }
     </style>
   </head>
@@ -116,25 +149,29 @@
     </div>
     <div class="container">
       <!-- Request Logs Section -->
-      <div style="text-align: center; margin-bottom: 20px">
+      <div class="table-section">
         <h2>Request Logs</h2>
         <div class="search-controls">
           <input
             type="text"
             id="searchLogsInput"
-            placeholder="Buscar logs..."
+            placeholder="Search logs by endpoint or message..."
           />
         </div>
         <table id="logsTable">
           <colgroup>
             <col style="width: 4%" />
             <col style="width: 15%" />
-            <col style="width: 8%" />
-            <col style="width: 7%" />
-            <col style="width: 6%" />
-            <col style="width: 30%" />
+            <col style="width: 15%" />
+            <!-- Adjusted width -->
+            <col style="width: 10%" />
+            <!-- Adjusted width -->
             <col style="width: 6%" />
             <col style="width: 20%" />
+            <!-- Adjusted width -->
+            <col style="width: 6%" />
+            <col style="width: 15%" />
+            <!-- Adjusted width -->
             <col style="width: 5%" />
             <col style="width: 8%" />
           </colgroup>
@@ -152,32 +189,40 @@
               <th>Usage</th>
             </tr>
           </thead>
-          <tbody></tbody>
+          <tbody>
+            <!-- Initial loading state -->
+            <tr class="loading-row">
+              <td colspan="10">Loading logs...</td>
+            </tr>
+          </tbody>
         </table>
         <div class="pagination-controls">
-          <button id="prevLogsPage">Previous</button>
-          <span id="logsPageIndicator">Page 1</span>
-          <button id="nextLogsPage">Next</button>
+          <button id="prevLogsPage" disabled>Previous</button>
+          <span id="logsPageIndicator">Page 1 of ?</span>
+          <button id="nextLogsPage" disabled>Next</button>
         </div>
       </div>
 
       <!-- User Logs Section -->
-      <div style="text-align: center; margin-top: 40px">
+      <div class="table-section">
         <h2>User Logs</h2>
         <div class="search-controls">
           <input
             type="text"
             id="searchUserLogsInput"
-            placeholder="Buscar user logs..."
+            placeholder="Search user logs by endpoint or type..."
           />
         </div>
         <table id="userLogsTable">
           <colgroup>
             <col style="width: 5%" />
-            <col style="width: 13%" />
-            <col style="width: 16%" />
+            <col style="width: 18%" />
+            <!-- Adjusted width -->
+            <col style="width: 20%" />
+            <!-- Adjusted width -->
             <col style="width: 10%" />
             <col />
+            <!-- Remaining width for message -->
           </colgroup>
           <thead>
             <tr>
@@ -188,18 +233,31 @@
               <th>Message</th>
             </tr>
           </thead>
-          <tbody></tbody>
+          <tbody>
+            <!-- Initial loading state -->
+            <tr class="loading-row">
+              <td colspan="5">Loading user logs...</td>
+            </tr>
+          </tbody>
         </table>
         <div class="pagination-controls">
-          <button id="prevUserLogsPage">Previous</button>
-          <span id="userLogsPageIndicator">Page 1</span>
-          <button id="nextUserLogsPage">Next</button>
+          <button id="prevUserLogsPage" disabled>Previous</button>
+          <span id="userLogsPageIndicator">Page 1 of ?</span>
+          <button id="nextUserLogsPage" disabled>Next</button>
         </div>
       </div>
     </div>
 
-    <input type="file" id="importFile" style="display: none" accept=".sqlite" />
+    <!-- Hidden file input for import -->
+    <input
+      type="file"
+      id="importFile"
+      style="display: none"
+      accept=".sqlite, application/x-sqlite3"
+    />
+
     <script>
+      // --- DOM Elements ---
       const exportButton = document.getElementById("exportButton");
       const importButton = document.getElementById("importButton");
       const importFile = document.getElementById("importFile");
@@ -207,7 +265,10 @@
       const memoryUsageElement = document.getElementById("memoryUsage");
       const memoryUsageAppElement = document.getElementById("memoryUsageApp");
 
-      // Configuración de las tablas
+      // --- Configuration ---
+      const API_BASE_URL = "http://localhost:3000"; // Use a constant for the base URL
+      const WS_URL = "ws://localhost:8080";
+
       const tablesConfig = {
         logs: {
           tableBody: document
@@ -219,7 +280,8 @@
           nextButton: document.getElementById("nextLogsPage"),
           endpoint: "/search-logs",
           limit: 10,
-          columns: 10,
+          columns: 10, // Number of columns in the table
+          dataKey: "logs", // Key in the API response containing the data array
         },
         userLogs: {
           tableBody: document
@@ -232,199 +294,381 @@
           endpoint: "/search-userlogs",
           limit: 10,
           columns: 5,
+          dataKey: "userLogs",
         },
       };
 
-      // Estado de paginación
+      // --- State ---
       const paginationState = {
         logs: {
           currentPage: 1,
-          isSearching: true, // Modo paginación activado por defecto
           totalItems: 0,
+          // isSearching removed - logic now checks input value directly
         },
         userLogs: {
           currentPage: 1,
-          isSearching: true, // Modo paginación activado por defecto
           totalItems: 0,
         },
       };
 
-      // WebSocket connection
-      const ws = new WebSocket("ws://localhost:8080");
+      let ws;
+      function connectWebSocket() {
+        ws = new WebSocket(WS_URL);
 
-      ws.onopen = () => {
-        console.log("WebSocket connection established.");
-      };
+        ws.onopen = () => {
+          console.log("Conexion con WebSocket establecida.");
+          fetchTableData("logs");
+          fetchTableData("userLogs");
+        };
 
-      ws.onmessage = (event) => {
-        const data = JSON.parse(event.data);
+        ws.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
 
-        // Actualizar métricas siempre
-        if (data.metrics) {
-          cpuUsageElement.textContent = `Server CPU Usage: ${data.metrics.cpuUsage}`;
-          memoryUsageAppElement.textContent = `Server Memory Usage: ${data.metrics.memoryUsageApp}`;
-          memoryUsageElement.textContent = `Total Memory Usage: ${data.metrics.memoryUsage}`;
-        }
+            // 1. Update metrics always
+            if (data.metrics) {
+              cpuUsageElement.textContent = `Server CPU Usage: ${data.metrics.cpuUsage}`;
+              memoryUsageAppElement.textContent = `Server Memory Usage: ${data.metrics.memoryUsageApp}`;
+              memoryUsageElement.textContent = `Total Memory Usage: ${data.metrics.memoryUsage}`;
+            }
 
-        // Actualizar userLogs solo si no hay búsqueda activa
-        if (!paginationState.userLogs.isSearching && data.userLogs) {
-          updateTable(
-            "userLogs",
-            data.userLogs.slice(0, tablesConfig.userLogs.limit)
+            // 2. Update 'logs' table ONLY if on page 1 and no search term
+            const logsConfig = tablesConfig.logs;
+            const logsState = paginationState.logs;
+            if (
+              logsState.currentPage === 1 &&
+              logsConfig.searchInput.value.trim() === "" &&
+              data.logs
+            ) {
+              console.log("WS Update: Updating logs table.");
+              updateTable("logs", data.logs); // Assumes WS sends limited, sorted data
+              // Update total items count and pagination from WS message
+              if (
+                data.logsTotal !== undefined &&
+                data.logsTotal !== logsState.totalItems
+              ) {
+                logsState.totalItems = data.logsTotal;
+                updatePaginationInfo("logs");
+              }
+            }
+
+            // 3. Update 'userLogs' table ONLY if on page 1 and no search term
+            const userLogsConfig = tablesConfig.userLogs;
+            const userLogsState = paginationState.userLogs;
+            if (
+              userLogsState.currentPage === 1 &&
+              userLogsConfig.searchInput.value.trim() === "" &&
+              data.userLogs
+            ) {
+              console.log("WS Update: Updating userLogs table.");
+              updateTable("userLogs", data.userLogs); // Assumes WS sends limited, sorted data
+              // Update total items count and pagination from WS message
+              if (
+                data.userLogsTotal !== undefined &&
+                data.userLogsTotal !== userLogsState.totalItems
+              ) {
+                userLogsState.totalItems = data.userLogsTotal;
+                updatePaginationInfo("userLogs");
+              }
+            }
+          } catch (error) {
+            console.error("Error processing WebSocket message:", error);
+          }
+        };
+
+        ws.onclose = () => {
+          console.log(
+            "WebSocket connection closed. Attempting to reconnect..."
           );
-        }
-      };
+          // Clear metrics or show disconnected status
+          cpuUsageElement.textContent = "Server CPU Usage: Disconnected";
+          memoryUsageAppElement.textContent =
+            "Server Memory Usage: Disconnected";
+          memoryUsageElement.textContent = "Total Memory Usage: Disconnected";
+          // Attempt to reconnect after a delay
+          setTimeout(connectWebSocket, 5000); // Reconnect every 5 seconds
+        };
 
-      ws.onclose = () => {
-        console.log("WebSocket connection closed.");
-      };
+        ws.onerror = (error) => {
+          console.error("WebSocket error:", error);
+          // Optionally clear metrics or show an error status
+          cpuUsageElement.textContent = "Server CPU Usage: Error";
+          memoryUsageAppElement.textContent = "Server Memory Usage: Error";
+          memoryUsageElement.textContent = "Total Memory Usage: Error";
+          // ws.close() will be called automatically, triggering the onclose handler for reconnection
+        };
+      }
 
-      ws.onerror = (error) => {
-        console.error("WebSocket error:", error);
-      };
-
+      // --- Data Fetching ---
       async function fetchTableData(tableType) {
         const config = tablesConfig[tableType];
         const state = paginationState[tableType];
-
         const query = config.searchInput.value.trim();
-        state.isSearching = query !== "" || tableType === "logs"; // Forzar paginación para logs
+
+        console.log(
+          `Fetching data for ${tableType}: Page ${state.currentPage}, Query: "${query}"`
+        );
+        setTableLoadingState(tableType, true); // Show loading indicator
 
         try {
-
           const response = await fetch(
-            `http://localhost:3000${
-              config.endpoint
-            }?search=${encodeURIComponent(query)}&page=${
-              state.currentPage
-            }&limit=${config.limit}`
+            `${API_BASE_URL}${config.endpoint}?search=${encodeURIComponent(
+              query
+            )}&page=${state.currentPage}&limit=${config.limit}`
           );
 
-          if (!response.ok) throw new Error("Network response was not ok");
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
           const data = await response.json();
 
-          // Guardar el total de items
-          state.totalItems = data.total;
-
-          updateTable(
-            tableType,
-            data[tableType === "logs" ? "logs" : "userLogs"]
-          );
-          updatePaginationInfo(tableType);
+          // Validate response structure (basic check)
+          if (
+            data &&
+            typeof data.total === "number" &&
+            Array.isArray(data[config.dataKey])
+          ) {
+            state.totalItems = data.total; // Store total items count
+            updateTable(tableType, data[config.dataKey]);
+            updatePaginationInfo(tableType);
+          } else {
+            console.error(
+              `Invalid data structure received for ${tableType}:`,
+              data
+            );
+            throw new Error("Invalid data structure from server.");
+          }
         } catch (error) {
           console.error(`Error fetching ${tableType}:`, error);
-          config.tableBody.innerHTML = `<tr><td colspan="${config.columns}">Error loading data: ${error.message}</td></tr>`;
+          setTableErrorState(tableType, error.message);
+        } finally {
+          setTableLoadingState(tableType, false); // Hide loading indicator
         }
       }
 
-      // Función para actualizar la información de paginación (chequea si podes ir a la siguiente pagina o la anterior)
-      // ademas de actualizar el total de paginas
+      // --- UI Updates ---
+
+      function setTableLoadingState(tableType, isLoading) {
+        const config = tablesConfig[tableType];
+        if (isLoading) {
+          config.tableBody.innerHTML = `<tr class="loading-row"><td colspan="${config.columns}">Loading...</td></tr>`;
+          // Disable controls while loading
+          config.prevButton.disabled = true;
+          config.nextButton.disabled = true;
+          config.searchInput.disabled = true;
+        } else {
+          // Re-enable controls after loading (actual state set by updatePaginationInfo/updateTable)
+          config.searchInput.disabled = false;
+        }
+      }
+
+      function setTableErrorState(tableType, errorMessage) {
+        const config = tablesConfig[tableType];
+        config.tableBody.innerHTML = `<tr class="error-row"><td colspan="${config.columns}">Error loading data: ${errorMessage}</td></tr>`;
+        // Keep controls disabled on error
+        config.prevButton.disabled = true;
+        config.nextButton.disabled = true;
+        config.pageIndicator.textContent = "Error";
+      }
+
       function updatePaginationInfo(tableType) {
         const config = tablesConfig[tableType];
         const state = paginationState[tableType];
 
-        const totalPages = Math.ceil(state.totalItems / config.limit);
-        config.pageIndicator.textContent = `Page ${state.currentPage} of ${totalPages}`;
+        // Prevent division by zero if limit is somehow 0
+        const totalPages =
+          config.limit > 0 ? Math.ceil(state.totalItems / config.limit) : 0;
+        // Ensure totalPages isn't negative or NaN, default to 0 or 1 if needed
+        const displayTotalPages = Math.max(
+          totalPages,
+          state.totalItems > 0 ? 1 : 0
+        );
+
+        config.pageIndicator.textContent = `Page ${state.currentPage} of ${displayTotalPages}`;
         config.prevButton.disabled = state.currentPage <= 1;
-        config.nextButton.disabled = state.currentPage >= totalPages;
+        config.nextButton.disabled = state.currentPage >= displayTotalPages;
+
+        // Handle case where totalItems is 0
+        if (state.totalItems === 0) {
+          config.prevButton.disabled = true;
+          config.nextButton.disabled = true;
+          config.pageIndicator.textContent = "Page 1 of 1"; // Or 'No data'
+        }
       }
 
       function updateTable(tableType, items) {
         const config = tablesConfig[tableType];
-        config.tableBody.innerHTML = "";
+        config.tableBody.innerHTML = ""; // Clear previous content or loading state
+
+        if (!items || items.length === 0) {
+          const emptyRow = document.createElement("tr");
+          emptyRow.classList.add("empty-row");
+          emptyRow.innerHTML = `<td colspan="${config.columns}">No logs found.</td>`;
+          config.tableBody.appendChild(emptyRow);
+          return; // Exit early if no items
+        }
 
         items.forEach((item) => {
           const row = document.createElement("tr");
+          // Use Intl for locale-specific date formatting
+          const formattedTimestamp = item.timestamp
+            ? new Date(item.timestamp).toLocaleString()
+            : "N/A";
+          // Helper to safely display potentially null/undefined values
+          const safeText = (text) => text || "";
 
           if (tableType === "logs") {
             row.innerHTML = `
-              <td>${item.id}</td>
-              <td>${new Date(item.timestamp).toLocaleString()}</td>
-              <td>${item.endpoint}</td>
-              <td>${item.ip}</td>
-              <td>${item.method}</td>
-              <td>${item.body || ""}</td>
-              <td>${item.logType}</td>
-              <td>${item.message}</td>
-              <td>${item.responseTime}</td>
-              <td>${item.usage}</td>
+              <td>${safeText(item.id)}</td>
+              <td>${formattedTimestamp}</td>
+              <td>${safeText(item.endpoint)}</td>
+              <td>${safeText(item.ip)}</td>
+              <td>${safeText(item.method)}</td>
+              <td><pre>${safeText(
+                item.body
+              )}</pre></td> <!-- This part is correct -->
+              <td>${safeText(item.logType)}</td>
+              <td>${safeText(item.message)}</td>
+              <td>${safeText(item.responseTime)}</td>
+              <td>${safeText(item.usage)}</td>
             `;
           } else {
             // userLogs
             row.innerHTML = `
-              <td>${item.id}</td>
-              <td>${new Date(item.timestamp).toLocaleString()}</td>
-              <td>${item.endpoint}</td>
-              <td>${item.logType}</td>
-              <td>${item.message}</td>
+              <td>${safeText(item.id)}</td>
+              <td>${formattedTimestamp}</td>
+              <td>${safeText(item.endpoint)}</td>
+              <td>${safeText(item.logType)}</td>
+              <td>${safeText(item.message)}</td>
             `;
           }
-
           config.tableBody.appendChild(row);
         });
 
-        // Rellenar filas vacías porque en blanco se ven feas
-        const emptyRows = config.limit - items.length;
-        for (let i = 0; i < emptyRows; i++) {
-          const emptyRow = document.createElement("tr");
-          emptyRow.innerHTML = `<td colspan="${config.columns}" style="text-align: center;">-</td>`;
-          config.tableBody.appendChild(emptyRow);
+        // Optional: Add empty rows for consistent table height (consider if needed)
+        /*
+        const emptyRowsCount = config.limit - items.length;
+        if (emptyRowsCount > 0) {
+            for (let i = 0; i < emptyRowsCount; i++) {
+                const emptyRow = document.createElement("tr");
+                emptyRow.classList.add('empty-row'); // Add class for styling
+                emptyRow.innerHTML = `<td colspan="${config.columns}">&nbsp;</td>`; // Use &nbsp; or leave empty
+                config.tableBody.appendChild(emptyRow);
+            }
         }
+        */
       }
 
-      // Configurar event listeners para ambas tablas
-      Object.keys(tablesConfig).forEach((tableType) => {
-        const config = tablesConfig[tableType];
-        const state = paginationState[tableType];
+      // --- Event Listeners ---
+      function setupEventListeners() {
+        // Debounce function
+        function debounce(func, wait) {
+          let timeout;
+          return function executedFunction(...args) {
+            const later = () => {
+              clearTimeout(timeout);
+              func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+          };
+        }
 
-        // Buscar los logs 
-        config.searchInput.addEventListener("input", () => {
-          state.currentPage = 1;
-          fetchTableData(tableType);
+        // Setup listeners for each table configuration
+        Object.keys(tablesConfig).forEach((tableType) => {
+          const config = tablesConfig[tableType];
+          const state = paginationState[tableType];
+
+          // Debounced search input handler
+          const debouncedFetch = debounce(() => {
+            state.currentPage = 1; // Reset to page 1 on new search
+            fetchTableData(tableType);
+          }, 300); // Adjust debounce delay (ms) as needed
+
+          config.searchInput.addEventListener("input", debouncedFetch);
+
+          // Previous page button
+          config.prevButton.addEventListener("click", () => {
+            if (state.currentPage > 1) {
+              state.currentPage--;
+              fetchTableData(tableType);
+            }
+          });
+
+          // Next page button
+          config.nextButton.addEventListener("click", () => {
+            // Check against total pages before incrementing (already handled by disabled state, but good practice)
+            const totalPages = Math.ceil(state.totalItems / config.limit);
+            if (state.currentPage < totalPages) {
+              state.currentPage++;
+              fetchTableData(tableType);
+            }
+          });
         });
 
-        // Pasar a la pagina anterior
-        config.prevButton.addEventListener("click", () => {
-          if (state.currentPage > 1) {
-            state.currentPage--;
-            fetchTableData(tableType);
+        // Import/Export buttons
+        exportButton.addEventListener("click", () => {
+          window.location.href = `${API_BASE_URL}/download-logs`;
+        });
+
+        importButton.addEventListener("click", () => {
+          importFile.click(); // Trigger hidden file input
+        });
+
+        importFile.addEventListener("change", async (event) => {
+          const file = event.target.files[0];
+          if (!file) return; // No file selected
+
+          const formData = new FormData();
+          formData.append("file", file);
+
+          console.log("Importing file:", file.name);
+          // Optionally show a loading indicator for import
+          importButton.textContent = "Importing...";
+          importButton.disabled = true;
+
+          try {
+            const response = await fetch(`${API_BASE_URL}/import-logs`, {
+              method: "POST",
+              body: formData,
+            });
+
+            const result = await response.json(); // Assuming server sends JSON response
+
+            if (!response.ok) {
+              throw new Error(
+                result.error || `Import failed with status ${response.status}`
+              );
+            }
+
+            console.log("Import successful:", result.message);
+            alert("Logs imported successfully!"); // Simple feedback
+
+            // Reset file input value to allow importing the same file again if needed
+            event.target.value = null;
+
+            // Reset pagination and reload both tables
+            paginationState.logs.currentPage = 1;
+            paginationState.userLogs.currentPage = 1;
+            fetchTableData("logs");
+            fetchTableData("userLogs");
+          } catch (error) {
+            console.error("Error importing logs:", error);
+            alert(`Error importing logs: ${error.message}`); // Show error to user
+          } finally {
+            // Restore button state
+            importButton.textContent = "Import Logs";
+            importButton.disabled = false;
           }
         });
+      }
 
-        // Paginación siguiente
-        config.nextButton.addEventListener("click", () => {
-          state.currentPage++;
-          fetchTableData(tableType);
-        });
+      // --- Initialization ---
+      document.addEventListener("DOMContentLoaded", () => {
+        setupEventListeners();
+        connectWebSocket(); // Start WebSocket connection
+        // Initial data fetch is now triggered by ws.onopen
       });
-
-      // Configurar botones de import/export
-      exportButton.addEventListener("click", () => {
-        window.location.href = "http://localhost:3000/download-logs";
-      });
-
-      importButton.addEventListener("click", () => {
-        importFile.click();
-      });
-
-      importFile.addEventListener("change", () => {
-        const file = importFile.files[0];
-        const formData = new FormData();
-        formData.append("file", file);
-
-        fetch("http://localhost:3000/import-logs", {
-          method: "POST",
-          body: formData,
-        }).then(() => {
-          // Recargar ambas tablas después de importar
-          fetchTableData("logs");
-          fetchTableData("userLogs");
-        });
-      });
-
-      // Carga inicial - mostrar todos los logs paginados
-      fetchTableData("logs");
-      fetchTableData("userLogs");
     </script>
   </body>
 </html>
